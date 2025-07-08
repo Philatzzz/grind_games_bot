@@ -1,4 +1,4 @@
-from telegram import Update, InputMediaPhoto
+from telegram import Update, InputMediaPhoto, ReplyKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -30,6 +30,14 @@ MEDIA_GROUP_DELAY = 1.0  # Задержка для сбора медиагруп
 ACCOUNT_INFO = 0
 ADMIN_DB_FILE = "admins.db"
 SQLITE_TIMEOUT = 10  # секунд для ожидания разблокировки БД
+
+# Константы отзывов
+REVIEW_PHOTOS = [
+    "AgACAgIAAxkBAAICO2hs9wABZdRD-__U8VkQ4-sGQatUMQACKvcxG2gAAWlLHUTK0lkjfD0BAAMCAAN5AAM2BA",
+    "AgACAgIAAxkBAAICPWhs9wVRoEb4YYMCnB3WAUFnKjLPAAIs9zEbaAABaUvP67RaQkhiJgEAAwIAA3kAAzYE"
+]
+REVIEW_KEYBOARD = [["📊 Bewertungen"]]
+REVIEW_MARKUP = ReplyKeyboardMarkup(REVIEW_KEYBOARD, resize_keyboard=True, one_time_keyboard=False)
 
 # Чтение конфигурации
 config = configparser.ConfigParser()
@@ -281,7 +289,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📸 Fotos von Deinem Konto\n\n"
             "Du kannst auch die automatische Verifizierungsmethode verwenden und dein Konto " \
             "durch den Skin Checker überprüfen lassen und uns die Fotos zukommen lassen, " \
-            "die du vom Bot in Telegram in nur wenigen Sekunden erhältst.\n@BombSkinCheckerBot"
+            "die du vom Bot in Telegram in nur wenigen Sekunden erhältst.\n@BombSkinCheckerBot",
+            reply_markup=REVIEW_MARKUP
         )
         return ACCOUNT_INFO
     except Exception as e:
@@ -290,6 +299,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def account_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        if update.message.text == "📊 Bewertungen":
+            await show_reviews(update, context)
+            return ACCOUNT_INFO
         u = update.message.from_user
         user_info = f"@{u.username}" if u.username else f"{u.first_name} {u.last_name or ''}"
         
@@ -308,7 +320,7 @@ async def account_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Fehler bei der Bearbeitung der Anfrage. Versuchen Sie es später noch einmal.")
             return ConversationHandler.END
         
-        await update.message.reply_text("✅ Ich danke Ihnen! Bitte warten Sie auf die Antwort des Administrators.")
+        await update.message.reply_text("✅ Ich danke Ihnen! Bitte warten Sie auf die Antwort des Administrators.", reply_markup=REVIEW_MARKUP)
         
         # Создаем топик
         topic_id = await create_support_topic(
@@ -326,6 +338,7 @@ async def account_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка в account_info: {e}")
         await update.message.reply_text("❌ Произошла ошибка при обработке вашего запроса")
         return ConversationHandler.END
+
 
 async def add_admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -700,6 +713,40 @@ async def invalid_account_info(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     return ACCOUNT_INFO
 
+
+async def show_reviews(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        if not REVIEW_PHOTOS:
+            await update.message.reply_text("⚠️ Keine Bewertungen verfügbar")
+            return
+        
+        try:
+            await update.message.delete()
+        except:
+            logger.warning("Konnte die Nachricht nicht löschen")
+
+        # Отправляем все фото отзывов медиагруппой
+        media_group = []
+        for i, photo_id in enumerate(REVIEW_PHOTOS):
+            if i == 0:
+                # Для первого фото добавляем подпись
+                media_group.append(InputMediaPhoto(
+                    media=photo_id,
+                    caption="📊 Bewertungen unserer Kunden:"
+                ))
+            else:
+                media_group.append(InputMediaPhoto(media=photo_id))
+        
+        await context.bot.send_media_group(
+            chat_id=update.message.chat_id,
+            media=media_group
+        )
+
+    except Exception as e:
+        logger.error(f"Fehler in show_reviews: {e}")
+        await update.message.reply_text("❌ Fehler beim Laden der Bewertungen")
+
+
 def main():
     # Проверка конфигурации группы
     if not ADMIN_GROUP_ID:
@@ -711,13 +758,17 @@ def main():
     
     application = Application.builder().token(BOT_TOKEN).build()
     
+    review_handler = MessageHandler(filters.Regex(r'^📊 Bewertungen$'), show_reviews)
+
     # Обработчики для пользователей
     user_conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             ACCOUNT_INFO: [
-                MessageHandler(filters.TEXT, account_info),
-                MessageHandler(filters.PHOTO, account_info),
+                MessageHandler(
+                    filters.TEXT | filters.PHOTO, 
+                    account_info
+                )
             ]
         },
         fallbacks=[],
@@ -743,7 +794,8 @@ def main():
     application.add_handlers([
         *admin_handlers,
         user_conv,
-        *user_message_handlers
+        *user_message_handlers,
+        review_handler
     ])
     
     application.run_polling()
