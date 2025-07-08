@@ -262,6 +262,19 @@ async def create_support_topic(context, account_id, user_info, account_info):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await update.message.reply_text(
+            "Grind-Games ist die führende deutsche Seite für den An- und Verkauf von Fortnite Accounts. "
+            "Unser Ziel ist es, jedem User ein faires Angebot für seinen Fortnite Account zukommen zu lassen "
+            "und damit die Möglichkeit zu geben, aus einem alten Fortnite Account noch Geld machen zu können - "
+            "während man gleichzeitig einem künftigen Käufer eine Freude bereiten kann!\n\n"
+            "Wir antworten auf alle Account Anfragen in der Regel innerhalb von wenigen Stunden.\n\n"
+            "Sobald wir uns auf einen Preis geeinigt haben, bereiten wir die Überweisung auf dein Bankkonto direkt vor. "
+            "Es ist durchaus möglich, dass das Geld bereits nach wenigen Stunden bei dir ist und wir geben unser Bestes, "
+            "um dafür zu sorgen, dass alle Auszahlungen an unsere Verkäufer schnellstmöglich ausgeführt werden."
+        )
+
+        await asyncio.sleep(1.5)
+
+        await update.message.reply_text(
             "👋 Hallo. Schick uns bitte Deine Angaben in diesem Format:\n"
             "📜 Anzahl der Skins:\n"
             "💎 OG oder seltene Skins:\n"

@@ -1,0 +1,4 @@
+nohup: ignoring input
+  File "/root/grind_games_bot/bot.py", line 264
+    await update.message.reply_text(
+TabError: inconsistent use of tabs and spaces in indentation
