@@ -785,7 +785,7 @@ def main():
     
     # Обработчики для пользовательских сообщений
     user_message_handlers = [
-        MessageHandler(filters.TEXT & ~filters.COMMAND, user_message),
+        MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex(r'^📊 Bewertungen$'), user_message),
         MessageHandler(filters.PHOTO, user_photo),
         MessageHandler(filters.PHOTO, handle_media_group)
     ]
@@ -793,9 +793,9 @@ def main():
     # Регистрация обработчиков
     application.add_handlers([
         *admin_handlers,
+        review_handler,
         user_conv,
-        *user_message_handlers,
-        review_handler
+        *user_message_handlers
     ])
     
     application.run_polling()
